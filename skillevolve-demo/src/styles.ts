@@ -1,5 +1,6 @@
 import { loadFont as loadInter } from "@remotion/google-fonts/Inter";
 import { loadFont as loadJetBrains } from "@remotion/google-fonts/JetBrainsMono";
+import { loadFont as loadSpaceGrotesk } from "@remotion/google-fonts/SpaceGrotesk";
 
 const { fontFamily: interFamily } = loadInter("normal", {
   weights: ["400", "500", "600", "700", "800", "900"],
@@ -11,8 +12,14 @@ const { fontFamily: monoFamily } = loadJetBrains("normal", {
   subsets: ["latin"],
 });
 
+const { fontFamily: displayFamily } = loadSpaceGrotesk("normal", {
+  weights: ["400", "500", "600", "700"],
+  subsets: ["latin"],
+});
+
 export const FONTS = {
   heading: interFamily,
+  display: displayFamily,
   body: interFamily,
   mono: monoFamily,
 };
