@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synthetic Phylogeny — Generative Art</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Lora:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --anthropic-dark: #141413;
+            --anthropic-light: #faf9f5;
+            --anthropic-mid-gray: #b0aea5;
+            --anthropic-light-gray: #e8e6dc;
+            --anthropic-orange: #d97757;
+            --anthropic-blue: #6a9bcc;
+            --anthropic-green: #788c5d;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, var(--anthropic-light) 0%, #f5f3ee 100%);
+            min-height: 100vh;
+            color: var(--anthropic-dark);
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .sidebar {
+            width: 320px;
+            flex-shrink: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(20, 20, 19, 0.1);
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .sidebar h1 {
+            font-family: 'Lora', serif;
+            font-size: 24px;
+            font-weight: 500;
+            color: var(--anthropic-dark);
+            margin-bottom: 8px;
+        }
+
+        .sidebar .subtitle {
+            color: var(--anthropic-mid-gray);
+            font-size: 14px;
+            margin-bottom: 32px;
+            line-height: 1.4;
+        }
+
+        .control-section { margin-bottom: 32px; }
+
+        .control-section h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--anthropic-dark);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-section h3::before {
+            content: '•';
+            color: var(--anthropic-orange);
+            font-weight: bold;
+        }
+
+        .seed-input {
+            width: 100%;
+            background: var(--anthropic-light);
+            padding: 12px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin-bottom: 12px;
+            border: 1px solid var(--anthropic-light-gray);
+            text-align: center;
+        }
+
+        .seed-input:focus {
+            outline: none;
+            border-color: var(--anthropic-orange);
+            box-shadow: 0 0 0 2px rgba(217, 119, 87, 0.1);
+            background: white;
+        }
+
+        .seed-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .regen-button { margin-bottom: 0; }
+
+        .control-group { margin-bottom: 20px; }
+
+        .control-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--anthropic-dark);
+            margin-bottom: 8px;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .slider-container input[type="range"] {
+            flex: 1;
+            height: 4px;
+            background: var(--anthropic-light-gray);
+            border-radius: 2px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--anthropic-orange);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .slider-container input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+            background: #c86641;
+        }
+
+        .slider-container input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: var(--anthropic-orange);
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+        }
+
+        .value-display {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: var(--anthropic-mid-gray);
+            min-width: 60px;
+            text-align: right;
+        }
+
+        .button {
+            background: var(--anthropic-orange);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+
+        .button:hover {
+            background: #c86641;
+            transform: translateY(-1px);
+        }
+
+        .button:active { transform: translateY(0); }
+
+        .button.secondary { background: var(--anthropic-blue); }
+        .button.secondary:hover { background: #5a8bb8; }
+        .button.tertiary { background: var(--anthropic-green); }
+        .button.tertiary:hover { background: #6b7b52; }
+
+        .button-row { display: flex; gap: 8px; }
+        .button-row .button { flex: 1; }
+
+        .canvas-area {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 0;
+        }
+
+        #canvas-container {
+            width: 100%;
+            max-width: 1000px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(20, 20, 19, 0.1);
+            background: #0a0e14;
+        }
+
+        #canvas-container canvas {
+            display: block;
+            width: 100% !important;
+            height: auto !important;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: var(--anthropic-mid-gray);
+            padding: 40px;
+        }
+
+        .stats {
+            margin-top: 12px;
+            padding: 12px;
+            background: var(--anthropic-light);
+            border-radius: 8px;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+            color: var(--anthropic-mid-gray);
+            line-height: 1.8;
+        }
+
+        @media (max-width: 600px) {
+            .container { flex-direction: column; }
+            .sidebar { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h1>Synthetic Phylogeny</h1>
+            <div class="subtitle">AI agents emerging from noise, clustering into species, evolving toward intelligence. Each seed grows a unique civilization.</div>
+
+            <!-- Seed Section -->
+            <div class="control-section">
+                <h3>Seed</h3>
+                <input type="number" id="seed-input" class="seed-input" value="12345" onchange="updateSeed()">
+                <div class="seed-controls">
+                    <button class="button secondary" onclick="previousSeed()">← Prev</button>
+                    <button class="button secondary" onclick="nextSeed()">Next →</button>
+                </div>
+                <button class="button tertiary regen-button" onclick="randomSeedAndUpdate()">↻ Random</button>
+            </div>
+
+            <!-- Parameters Section -->
+            <div class="control-section">
+                <h3>Parameters</h3>
+
+                <div class="control-group">
+                    <label>Population</label>
+                    <div class="slider-container">
+                        <input type="range" id="population" min="100" max="800" step="50" value="400" oninput="updateParam('population', this.value)">
+                        <span class="value-display" id="population-value">400</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Noise Scale</label>
+                    <div class="slider-container">
+                        <input type="range" id="noiseScale" min="0.001" max="0.01" step="0.001" value="0.004" oninput="updateParam('noiseScale', this.value)">
+                        <span class="value-display" id="noiseScale-value">0.004</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Drift Speed</label>
+                    <div class="slider-container">
+                        <input type="range" id="driftSpeed" min="0.5" max="4.0" step="0.1" value="1.5" oninput="updateParam('driftSpeed', this.value)">
+                        <span class="value-display" id="driftSpeed-value">1.5</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Cluster Radius</label>
+                    <div class="slider-container">
+                        <input type="range" id="clusterRadius" min="20" max="80" step="5" value="45" oninput="updateParam('clusterRadius', this.value)">
+                        <span class="value-display" id="clusterRadius-value">45</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Evolution Threshold</label>
+                    <div class="slider-container">
+                        <input type="range" id="evolveThreshold" min="3" max="12" step="1" value="6" oninput="updateParam('evolveThreshold', this.value)">
+                        <span class="value-display" id="evolveThreshold-value">6</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Max Generations</label>
+                    <div class="slider-container">
+                        <input type="range" id="maxGen" min="3" max="8" step="1" value="5" oninput="updateParam('maxGen', this.value)">
+                        <span class="value-display" id="maxGen-value">5</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Trail Opacity</label>
+                    <div class="slider-container">
+                        <input type="range" id="trailOpacity" min="5" max="40" step="1" value="15" oninput="updateParam('trailOpacity', this.value)">
+                        <span class="value-display" id="trailOpacity-value">15</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Stats -->
+            <div class="control-section">
+                <h3>Population Stats</h3>
+                <div class="stats" id="stats">
+                    Initializing...
+                </div>
+            </div>
+
+            <!-- Actions Section -->
+            <div class="control-section">
+                <h3>Actions</h3>
+                <div class="button-row" style="margin-bottom: 8px;">
+                    <button class="button" onclick="resetParameters()">Reset</button>
+                    <button class="button secondary" onclick="downloadPNG()">↓ PNG</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="canvas-area">
+            <div id="canvas-container">
+                <div class="loading">Initializing generative art...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ═══════════════════════════════════════════════════════════════
+        // PARAMETERS
+        // ═══════════════════════════════════════════════════════════════
+
+        let params = {
+            seed: 12345,
+            population: 400,
+            noiseScale: 0.004,
+            driftSpeed: 1.5,
+            clusterRadius: 45,
+            evolveThreshold: 6,
+            maxGen: 5,
+            trailOpacity: 15
+        };
+
+        let defaultParams = {...params};
+
+        // ═══════════════════════════════════════════════════════════════
+        // GENERATION COLOR PALETTE
+        // From cool primordial to warm evolved
+        // ═══════════════════════════════════════════════════════════════
+
+        const GEN_COLORS = [
+            [110, 140, 220],  // Gen 0: soft indigo — raw potential
+            [70, 200, 240],   // Gen 1: electric cyan — first spark
+            [50, 220, 170],   // Gen 2: mint — early cooperation
+            [160, 230, 80],   // Gen 3: vivid lime — growing strength
+            [255, 200, 50],   // Gen 4: golden yellow — near-intelligence
+            [255, 120, 60],   // Gen 5: bright tangerine — emergence
+            [230, 60, 120],   // Gen 6: hot magenta — transcendence
+            [180, 80, 255],   // Gen 7: electric violet — apex
+        ];
+
+        // ═══════════════════════════════════════════════════════════════
+        // AGENT CLASS
+        // ═══════════════════════════════════════════════════════════════
+
+        class Agent {
+            constructor(x, y, gen) {
+                this.pos = createVector(x, y);
+                this.vel = createVector(0, 0);
+                this.acc = createVector(0, 0);
+                this.gen = gen;
+                this.age = 0;
+                this.maxAge = 600 + gen * 200 + random(400);
+                this.alive = true;
+                this.clusterTimer = 0;
+
+                // Generation-dependent properties
+                this.radius = 1.8 + gen * 1.4;
+                this.maxSpeed = params.driftSpeed * (1 + gen * 0.15);
+                this.perceptionRadius = params.clusterRadius * (1 + gen * 0.3);
+                this.trailWeight = 0.6 + gen * 0.7;
+                this.alpha = 160 + gen * 15;
+                // Per-agent color shift for variety within same generation
+                this.hueShift = random(-20, 20);
+            }
+
+            update(noiseT) {
+                this.age++;
+                if (this.age > this.maxAge) {
+                    this.alive = false;
+                    return;
+                }
+
+                // Noise-driven flow field
+                let angle = noise(
+                    this.pos.x * params.noiseScale,
+                    this.pos.y * params.noiseScale,
+                    noiseT
+                ) * TWO_PI * 3;
+
+                let flow = p5.Vector.fromAngle(angle);
+                flow.mult(0.3);
+                this.acc.add(flow);
+
+                // Higher gens have slight attraction to center mass
+                if (this.gen > 0) {
+                    let center = createVector(width / 2, height / 2);
+                    let toCenter = p5.Vector.sub(center, this.pos);
+                    let d = toCenter.mag();
+                    if (d > 100) {
+                        toCenter.normalize();
+                        toCenter.mult(0.02 * this.gen);
+                        this.acc.add(toCenter);
+                    }
+                }
+
+                this.vel.add(this.acc);
+                this.vel.limit(this.maxSpeed);
+                this.pos.add(this.vel);
+                this.acc.mult(0);
+
+                // Wrap around edges
+                if (this.pos.x < -20) this.pos.x = width + 20;
+                if (this.pos.x > width + 20) this.pos.x = -20;
+                if (this.pos.y < -20) this.pos.y = height + 20;
+                if (this.pos.y > height + 20) this.pos.y = -20;
+            }
+
+            display() {
+                let lifeRatio = this.age / this.maxAge;
+                let fadeIn = min(this.age / 30, 1);
+                let fadeOut = lifeRatio > 0.8 ? map(lifeRatio, 0.8, 1, 1, 0) : 1;
+                let a = this.alpha * fadeIn * fadeOut;
+
+                let base = GEN_COLORS[min(this.gen, GEN_COLORS.length - 1)];
+                let col = [
+                    constrain(base[0] + this.hueShift, 0, 255),
+                    constrain(base[1] + this.hueShift * 0.5, 0, 255),
+                    constrain(base[2] - this.hueShift * 0.3, 0, 255)
+                ];
+
+                // Trail line
+                let prevPos = p5.Vector.sub(this.pos, this.vel);
+                stroke(col[0], col[1], col[2], a * 0.7);
+                strokeWeight(this.trailWeight);
+                line(prevPos.x, prevPos.y, this.pos.x, this.pos.y);
+
+                // Agent body
+                noStroke();
+                fill(col[0], col[1], col[2], a);
+                circle(this.pos.x, this.pos.y, this.radius * 2);
+
+                // Single glow for evolved agents
+                if (this.gen >= 3) {
+                    let glowSize = this.radius * (3 + this.gen);
+                    fill(col[0], col[1], col[2], a * 0.1);
+                    circle(this.pos.x, this.pos.y, glowSize * 2);
+                }
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // SYSTEM STATE
+        // ═══════════════════════════════════════════════════════════════
+
+        let agents = [];
+        let noiseTime = 0;
+        let frameNum = 0;
+        let genCounts = [];
+        let totalEvolutions = 0;
+
+        // Spatial grid for efficient neighbor queries
+        let grid = {};
+        let gridSize = 50;
+
+        function cellKey(x, y) {
+            let cx = floor(x / gridSize);
+            let cy = floor(y / gridSize);
+            return cx + ',' + cy;
+        }
+
+        function buildGrid() {
+            grid = {};
+            for (let i = 0; i < agents.length; i++) {
+                let a = agents[i];
+                if (!a.alive) continue;
+                let key = cellKey(a.pos.x, a.pos.y);
+                if (!grid[key]) grid[key] = [];
+                grid[key].push(i);
+            }
+        }
+
+        function getNeighbors(agent) {
+            let neighbors = [];
+            let cx = floor(agent.pos.x / gridSize);
+            let cy = floor(agent.pos.y / gridSize);
+            let r = ceil(agent.perceptionRadius / gridSize);
+            for (let dx = -r; dx <= r; dx++) {
+                for (let dy = -r; dy <= r; dy++) {
+                    let key = (cx + dx) + ',' + (cy + dy);
+                    if (grid[key]) {
+                        for (let idx of grid[key]) {
+                            let other = agents[idx];
+                            if (other !== agent && other.alive) {
+                                let d = p5.Vector.dist(agent.pos, other.pos);
+                                if (d < agent.perceptionRadius) {
+                                    neighbors.push(other);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return neighbors;
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // P5.JS LIFECYCLE
+        // ═══════════════════════════════════════════════════════════════
+
+        function setup() {
+            let canvas = createCanvas(800, 800);
+            canvas.parent('canvas-container');
+            document.querySelector('.loading').style.display = 'none';
+            initializeSystem();
+        }
+
+        function initializeSystem() {
+            randomSeed(params.seed);
+            noiseSeed(params.seed);
+
+            agents = [];
+            noiseTime = 0;
+            frameNum = 0;
+            totalEvolutions = 0;
+
+            // Spawn initial population — all gen 0
+            for (let i = 0; i < params.population; i++) {
+                let x = random(width);
+                let y = random(height);
+                agents.push(new Agent(x, y, 0));
+            }
+
+            background(10, 14, 20);
+        }
+
+        function draw() {
+            // Semi-transparent wash for trail persistence
+            noStroke();
+            fill(10, 14, 20, params.trailOpacity);
+            rect(0, 0, width, height);
+
+            noiseTime += 0.003;
+            frameNum++;
+
+            buildGrid();
+
+            // Update and display agents
+            for (let agent of agents) {
+                if (!agent.alive) continue;
+                agent.update(noiseTime);
+                agent.display();
+            }
+
+            // Check for evolution events every 30 frames
+            if (frameNum % 30 === 0) {
+                checkEvolution();
+            }
+
+            // Respawn dead agents as gen 0 to maintain population (capped)
+            if (frameNum % 90 === 0) {
+                let aliveCount = agents.filter(a => a.alive).length;
+                let deficit = params.population * 0.6 - aliveCount;
+                if (deficit > 0 && aliveCount < 600) {
+                    let toSpawn = min(deficit, 10);
+                    for (let i = 0; i < toSpawn; i++) {
+                        let edge = floor(random(4));
+                        let x, y;
+                        if (edge === 0) { x = random(width); y = -10; }
+                        else if (edge === 1) { x = width + 10; y = random(height); }
+                        else if (edge === 2) { x = random(width); y = height + 10; }
+                        else { x = -10; y = random(height); }
+                        agents.push(new Agent(x, y, 0));
+                    }
+                }
+            }
+
+            // Prune dead agents periodically
+            if (frameNum % 90 === 0) {
+                agents = agents.filter(a => a.alive);
+            }
+
+            // Update stats display
+            if (frameNum % 45 === 0) {
+                updateStats();
+            }
+        }
+
+        function checkEvolution() {
+            let aliveCount = agents.filter(a => a.alive).length;
+            if (aliveCount > 600) return; // Skip if already at capacity
+            let candidates = agents.filter(a => a.alive && a.gen < params.maxGen);
+
+            for (let agent of candidates) {
+                let neighbors = getNeighbors(agent);
+                let sameOrHigherGen = neighbors.filter(n => n.gen >= agent.gen);
+
+                if (sameOrHigherGen.length >= params.evolveThreshold) {
+                    agent.clusterTimer++;
+
+                    if (agent.clusterTimer >= 3) {
+                        // Evolution event! Spawn a higher-gen agent at cluster center
+                        let cx = agent.pos.x;
+                        let cy = agent.pos.y;
+                        for (let n of sameOrHigherGen.slice(0, 5)) {
+                            cx += n.pos.x;
+                            cy += n.pos.y;
+                        }
+                        cx /= (1 + min(sameOrHigherGen.length, 5));
+                        cy /= (1 + min(sameOrHigherGen.length, 5));
+
+                        let newGen = agent.gen + 1;
+                        agents.push(new Agent(cx, cy, newGen));
+                        totalEvolutions++;
+
+                        // Draw evolution flash — bright burst
+                        let col = GEN_COLORS[min(newGen, GEN_COLORS.length - 1)];
+                        noStroke();
+                        fill(col[0], col[1], col[2], 50);
+                        circle(cx, cy, params.clusterRadius * 2.5);
+                        fill(255, 255, 255, 25);
+                        circle(cx, cy, params.clusterRadius * 1.2);
+
+                        // Neural link flash connections
+                        stroke(col[0], col[1], col[2], 60);
+                        strokeWeight(0.8);
+                        for (let n of sameOrHigherGen.slice(0, 5)) {
+                            line(cx, cy, n.pos.x, n.pos.y);
+                        }
+
+                        agent.clusterTimer = 0;
+                    }
+                } else {
+                    agent.clusterTimer = max(0, agent.clusterTimer - 1);
+                }
+            }
+        }
+
+        function updateStats() {
+            genCounts = [];
+            for (let a of agents) {
+                if (!a.alive) continue;
+                while (genCounts.length <= a.gen) genCounts.push(0);
+                genCounts[a.gen]++;
+            }
+
+            let statsEl = document.getElementById('stats');
+            let total = agents.filter(a => a.alive).length;
+            let lines = [`Alive: ${total}  |  Evolved: ${totalEvolutions}`];
+            for (let g = 0; g < genCounts.length; g++) {
+                if (genCounts[g] > 0) {
+                    let bar = '█'.repeat(min(floor(genCounts[g] / 5), 20));
+                    lines.push(`Gen ${g}: ${String(genCounts[g]).padStart(4)} ${bar}`);
+                }
+            }
+            statsEl.textContent = lines.join('\n');
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // UI HANDLERS
+        // ═══════════════════════════════════════════════════════════════
+
+        function updateParam(name, value) {
+            let v = parseFloat(value);
+            params[name] = v;
+            document.getElementById(name + '-value').textContent = v;
+
+            // Live-update agent properties that can change without restart
+            if (name === 'driftSpeed' || name === 'clusterRadius') {
+                for (let a of agents) {
+                    if (!a.alive) continue;
+                    a.maxSpeed = params.driftSpeed * (1 + a.gen * 0.15);
+                    a.perceptionRadius = params.clusterRadius * (1 + a.gen * 0.3);
+                }
+            }
+        }
+
+        function downloadPNG() {
+            saveCanvas('synthetic-phylogeny-seed-' + params.seed, 'png');
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // SEED CONTROLS
+        // ═══════════════════════════════════════════════════════════════
+
+        function updateSeedDisplay() {
+            document.getElementById('seed-input').value = params.seed;
+        }
+
+        function updateSeed() {
+            let input = document.getElementById('seed-input');
+            let newSeed = parseInt(input.value);
+            if (newSeed && newSeed > 0) {
+                params.seed = newSeed;
+                initializeSystem();
+            } else {
+                updateSeedDisplay();
+            }
+        }
+
+        function previousSeed() {
+            params.seed = Math.max(1, params.seed - 1);
+            updateSeedDisplay();
+            initializeSystem();
+        }
+
+        function nextSeed() {
+            params.seed = params.seed + 1;
+            updateSeedDisplay();
+            initializeSystem();
+        }
+
+        function randomSeedAndUpdate() {
+            params.seed = Math.floor(Math.random() * 999999) + 1;
+            updateSeedDisplay();
+            initializeSystem();
+        }
+
+        function resetParameters() {
+            params = {...defaultParams};
+
+            document.getElementById('population').value = params.population;
+            document.getElementById('population-value').textContent = params.population;
+            document.getElementById('noiseScale').value = params.noiseScale;
+            document.getElementById('noiseScale-value').textContent = params.noiseScale;
+            document.getElementById('driftSpeed').value = params.driftSpeed;
+            document.getElementById('driftSpeed-value').textContent = params.driftSpeed;
+            document.getElementById('clusterRadius').value = params.clusterRadius;
+            document.getElementById('clusterRadius-value').textContent = params.clusterRadius;
+            document.getElementById('evolveThreshold').value = params.evolveThreshold;
+            document.getElementById('evolveThreshold-value').textContent = params.evolveThreshold;
+            document.getElementById('maxGen').value = params.maxGen;
+            document.getElementById('maxGen-value').textContent = params.maxGen;
+            document.getElementById('trailOpacity').value = params.trailOpacity;
+            document.getElementById('trailOpacity-value').textContent = params.trailOpacity;
+
+            updateSeedDisplay();
+            initializeSystem();
+        }
+
+        window.addEventListener('load', function() {
+            updateSeedDisplay();
+        });
+    </script>
+</body>
+</html>
